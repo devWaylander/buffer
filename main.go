@@ -1,14 +1,24 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
+
+// Структуры ответа на запрос
+type data struct {
+	IndicatorToMoFactID int `json:"indicator_to_mo_fact_id"`
+}
+type response struct {
+	Data data `json:"DATA"`
+}
 
 // Константные значения
 const (
@@ -20,24 +30,41 @@ const (
 
 var (
 	// тело запроса form/data
-	form = url.Values{
-		"period_start":            {"2024-05-01"},
-		"period_end":              {"2024-05-31"},
-		"period_key":              {"month"},
-		"indicator_to_mo_id":      {"227373"},
-		"indicator_to_mo_fact_id": {"0"},
-		"value":                   {"1"},
-		"fact_time":               {"2024-05-31"},
-		"is_plan":                 {"0"},
-		"auth_user_id":            {"40"},
-		"comment":                 {"buffer Chubakov"},
+	form = map[string]string{
+		"period_start":            "2024-05-01",
+		"period_end":              "2024-05-31",
+		"period_key":              "month",
+		"indicator_to_mo_id":      "227373",
+		"indicator_to_mo_fact_id": "0",
+		"value":                   "1",
+		"fact_time":               "2024-05-31",
+		"is_plan":                 "0",
+		"auth_user_id":            "40",
+		"comment":                 "buffer Chubakov",
 	}
 )
 
+func createForm(form map[string]string) (string, io.Reader, error) {
+	body := new(bytes.Buffer)
+	mp := multipart.NewWriter(body)
+	defer mp.Close()
+
+	// записываем поля для FormData
+	for key, val := range form {
+		mp.WriteField(key, val)
+	}
+
+	return mp.FormDataContentType(), body, nil
+}
+
 func request(bearerToken string) (*http.Response, error) {
 	// Формируем запрос
-	data := form.Encode()
-	req, err := http.NewRequest("POST", URL, strings.NewReader(data))
+	contentType, body, err := createForm(form)
+	if err != nil {
+		println("failed to create form-data")
+	}
+
+	req, err := http.NewRequest("POST", URL, body)
 	if err != nil {
 		println("failed to create request on %s %v", URL, err)
 		return nil, err
@@ -45,9 +72,9 @@ func request(bearerToken string) (*http.Response, error) {
 
 	// Добавляем заголовки с авторизацией и типом контента
 	req.Header.Add("Authorization", "Bearer "+bearerToken)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Content-Length", strconv.Itoa(len(data)))
+	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("Accept", "*/*")
+	req.Header.Add("User-Agent", "buffer client")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -75,7 +102,13 @@ func main() {
 			continue
 		}
 
-		println(resp.StatusCode)
+		response := response{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			println(errors.New("failed to decode response"))
+		}
 		resp.Body.Close()
+
+		println("Code:", resp.StatusCode)
+		println("IndicatorToMoFactID:", response.Data.IndicatorToMoFactID)
 	}
 }
