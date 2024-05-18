@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -25,7 +24,7 @@ const (
 	// Размер буфера
 	bufferSize = 10
 	// URL до api endpoint
-	URL = "https://development.kpi-drive.ru/_api/facts/save_fact"
+	URL = "http://development.kpi-drive.ru/_api/facts/save_fact"
 )
 
 var (
@@ -102,13 +101,19 @@ func main() {
 			continue
 		}
 
-		response := response{}
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			println(errors.New("failed to decode response"))
-		}
-		resp.Body.Close()
+		// Логируем код ответа
+		println("Code:", resp.Status)
 
-		println("Code:", resp.StatusCode)
-		println("IndicatorToMoFactID:", response.Data.IndicatorToMoFactID)
+		// Декодируем полученный body response в случае 200
+		if resp.StatusCode == 200 {
+			response := response{}
+			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+				println("failed to decode response")
+			}
+
+			println("IndicatorToMoFactID:", response.Data.IndicatorToMoFactID)
+		}
+
+		resp.Body.Close()
 	}
 }
