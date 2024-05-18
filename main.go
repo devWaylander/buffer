@@ -24,7 +24,7 @@ const (
 	// Размер буфера
 	bufferSize = 10
 	// URL до api endpoint
-	URL = "http://development.kpi-drive.ru/_api/facts/save_fact"
+	URL = "https://development.kpi-drive.ru/_api/facts/save_fact"
 )
 
 var (
