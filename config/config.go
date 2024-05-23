@@ -30,6 +30,10 @@ func Configure() config {
 		GenMock     = os.Getenv("GEN_MOCK_REQ")
 	)
 
+	if Port == "" || BearerToken == "" || GenMock == "" {
+		log.Fatal("failed to read env variables")
+	}
+
 	GlobalConfig = config{
 		Port:        Port,
 		BearerToken: BearerToken,
