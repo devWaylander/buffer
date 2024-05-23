@@ -45,6 +45,10 @@ func main() {
 		Handler: wrappedMux,
 	}
 
+	if config.GenMock == "TRUE" {
+		go service.MockSaveFact(ctx)
+	}
+
 	g, gCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		log.Printf("Server is up on PORT: %s", config.Port)

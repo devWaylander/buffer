@@ -68,11 +68,9 @@ func Configure(ctx context.Context, mux *http.ServeMux, service Service) {
 
 		resp, err := service.SaveFact(ctx, body)
 		if err != nil {
-			if err != nil {
-				log.Println(err)
-				http.Error(w, internalErrors.ErrFailedToSendReq, http.StatusInternalServerError)
-				return
-			}
+			log.Println(err)
+			http.Error(w, internalErrors.ErrFailedToSendReq, http.StatusInternalServerError)
+			return
 		}
 
 		data, err := json.Marshal(resp)

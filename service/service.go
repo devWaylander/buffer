@@ -20,11 +20,14 @@ import (
 type service struct {
 	bufferMu sync.RWMutex
 	buffer   map[uuid.UUID]map[string]string
+
+	signalStored chan struct{}
 }
 
 func New() *service {
 	service := &service{
-		buffer: make(map[uuid.UUID]map[string]string),
+		buffer:       make(map[uuid.UUID]map[string]string),
+		signalStored: make(chan struct{}),
 	}
 
 	return service
@@ -38,44 +41,12 @@ const (
 	URL = "https://development.kpi-drive.ru/_api/facts/save_fact"
 )
 
-// func (s *service) runBuffer() {
-// 	for {
-// 		select {
-// 		case bufferForm := <-s.bufferChan:
-// 			s.bufferMu.RLock()
-// 			s.buffer[bufferForm.index] = bufferForm.form
-// 			s.bufferMu.RUnlock()
-
-// 		case index := <-s.sendFromBufferSignal:
-// 			s.bufferMu.RLock()
-
-// 			contentType, body, _ := s.createForm(s.buffer[index])
-
-// 			resp, err := s.request(contentType, body)
-// 			if err != nil {
-// 				s.responseChan <- resp
-// 			}
-// 			if resp.StatusCode == 200 {
-// 				s.deleteFromBuffer(index)
-// 			}
-
-// 			s.responseChan <- resp
-
-// 			s.bufferMu.RUnlock()
-
-// 		case index := <-s.deleteFromBufferSignal:
-// 			s.bufferMu.Lock()
-// 			delete(s.buffer, index)
-// 			s.bufferMu.Unlock()
-// 		}
-// 	}
-// }
-
 func (s *service) storeToBuffer(index uuid.UUID, data map[string]string) {
 	s.bufferMu.RLock()
 	defer s.bufferMu.RUnlock()
 
 	s.buffer[index] = data
+	s.signalStored <- struct{}{}
 }
 
 func (s *service) sendFromBuffer(index uuid.UUID) (*http.Response, error) {
@@ -135,18 +106,31 @@ func (s *service) request(contentType string, body io.Reader) (*http.Response, e
 	return resp, nil
 }
 
-// набивать буфер из ручки и мока
-// удалять из буфера только в случае успешного 200 от kpi
+func (s *service) MockSaveFact(ctx context.Context) {
+	for i := 0; i < MockReqCount; i++ {
+		resp, err := s.SaveFact(ctx, model.MockJson)
+		if err != nil {
+			println(err.Error())
+		}
+
+		println("IndicatorToMoFactID:", resp.Data.IndicatorToMoFactID)
+	}
+}
 
 func (s *service) SaveFact(ctx context.Context, data model.SaveFact) (model.Response, error) {
 	formMap := data.SaveFactToFormV1()
 	uuid := uuid.New()
 
-	s.storeToBuffer(uuid, formMap)
+	go s.storeToBuffer(uuid, formMap)
 
-	resp, err := s.sendFromBuffer(uuid)
-	if err != nil {
-		return model.Response{}, err
+	var resp *http.Response
+	signal := <-s.signalStored
+	if signal == struct{}{} {
+		var err error
+		resp, err = s.sendFromBuffer(uuid)
+		if err != nil {
+			return model.Response{}, err
+		}
 	}
 
 	// Декодируем полученный body response в случае 200
@@ -165,27 +149,4 @@ func (s *service) SaveFact(ctx context.Context, data model.SaveFact) (model.Resp
 	resp.Body.Close()
 
 	return response, nil
-
-	// Запускаем запросы
-	// for i := 0; i < BufferSize; i++ {
-	// 	resp, err := request(BearerToken)
-	// 	if err != nil {
-	// 		continue
-	// 	}
-
-	// 	// Логируем код ответа
-	// 	println("Code:", resp.Status)
-
-	// // Декодируем полученный body response в случае 200
-	// if resp.StatusCode == 200 {
-	// 	response := model.Response{}
-	// 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-	// 		println("failed to decode response")
-	// 	}
-
-	// 	println("IndicatorToMoFactID:", response.Data.IndicatorToMoFactID)
-	// }
-
-	// 	resp.Body.Close()
-	// }
 }

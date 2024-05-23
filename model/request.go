@@ -29,16 +29,15 @@ func (SV *SaveFact) SaveFactToFormV1() map[string]string {
 	}
 }
 
-// тело запроса form/data в API бд
-var MockForm = map[string]string{
-	"period_start":            "2024-05-01",
-	"period_end":              "2024-05-31",
-	"period_key":              "month",
-	"indicator_to_mo_id":      "227373",
-	"indicator_to_mo_fact_id": "0",
-	"value":                   "1",
-	"fact_time":               "2024-05-31",
-	"is_plan":                 "0",
-	"auth_user_id":            "40",
-	"comment":                 "buffer Chubakov",
+var MockJson = SaveFact{
+	PeriodStart:       "2024-05-01",
+	PeriodEnd:         "2024-05-31",
+	PeriodKey:         "month",
+	IndicatorToMoID:   "227373",
+	IndicatorToFactID: "0",
+	Value:             "1",
+	FactTime:          "2024-05-31",
+	IsPlan:            "0",
+	AuthUserID:        "40",
+	Comment:           "buffer Chubakov",
 }
