@@ -153,6 +153,7 @@ func (s *service) SaveFact(ctx context.Context, data model.SaveFact) (model.Resp
 	// Декодируем полученный body response в случае 200
 	response := model.Response{}
 	if resp.StatusCode == 200 {
+		// Удаляем успешный запрос из буфера
 		s.deleteFromBuffer(uuid)
 
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
