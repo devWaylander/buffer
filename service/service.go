@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"sync"
+	"time"
 
 	internalErrors "buffer/errors"
 
@@ -24,16 +25,19 @@ type service struct {
 	buffer map[uuid.UUID]map[string]string
 
 	// Сигнал о том, что запрос записан в буфер
-	signalStored chan struct{}
+	signalStored chan uuid.UUID
+	chanResponse chan *http.Response
 }
 
 func New() *service {
 	// Инициализация
 	service := &service{
 		buffer:       make(map[uuid.UUID]map[string]string),
-		signalStored: make(chan struct{}),
+		signalStored: make(chan uuid.UUID),
+		chanResponse: make(chan *http.Response),
 	}
 
+	go service.requester()
 	return service
 }
 
@@ -45,14 +49,30 @@ const (
 	URL = "https://development.kpi-drive.ru/_api/facts/save_fact"
 )
 
+func (s *service) requester() {
+	// Отправка запроса из буфера по сигналу о том, что запись произведена
+	// Следующий запрос будет заблокирован до тех пор, пока не освободится signalStored
+	// Данные ответа от API будут возвращены через chanResponse
+	for index := range s.signalStored {
+		//  Задержка перед отправкой в kpi API
+		time.Sleep(250 * time.Millisecond)
+
+		resp, err := s.sendFromBuffer(index)
+		if err != nil {
+			println(err.Error())
+		}
+		s.chanResponse <- resp
+	}
+}
+
 // Сохранение запроса в буфер
 func (s *service) storeToBuffer(index uuid.UUID, data map[string]string) {
-	s.bufferMu.RLock()
-	defer s.bufferMu.RUnlock()
-
+	s.bufferMu.Lock()
 	s.buffer[index] = data
+	s.bufferMu.Unlock()
+
 	// Подача сигнала о том, что запрос записан
-	s.signalStored <- struct{}{}
+	s.signalStored <- index
 }
 
 // Отправка из буфера
@@ -120,12 +140,14 @@ func (s *service) request(contentType string, body io.Reader) (*http.Response, e
 // Мок функция генерации запросов
 func (s *service) MockSaveFact(ctx context.Context) {
 	for i := 0; i < MockReqCount; i++ {
-		resp, err := s.SaveFact(ctx, model.MockJson)
-		if err != nil {
-			println(err.Error())
-		}
+		go func() {
+			resp, err := s.SaveFact(ctx, model.MockJson)
+			if err != nil {
+				println(err.Error())
+			}
 
-		println("IndicatorToMoFactID:", resp.Data.IndicatorToMoFactID)
+			println("IndicatorToMoFactID:", resp.Data.IndicatorToMoFactID)
+		}()
 	}
 }
 
@@ -139,16 +161,8 @@ func (s *service) SaveFact(ctx context.Context, data model.SaveFact) (model.Resp
 	// Сохранение в буфер
 	go s.storeToBuffer(uuid, formMap)
 
-	// Отправка запроса из буфера по сигналу
-	var resp *http.Response
-	signal := <-s.signalStored
-	if signal == struct{}{} {
-		var err error
-		resp, err = s.sendFromBuffer(uuid)
-		if err != nil {
-			return model.Response{}, err
-		}
-	}
+	// Блокируемся на получение ответа на запрос по каналу из горутины с requester
+	resp := <-s.chanResponse
 
 	// Декодируем полученный body response в случае 200
 	response := model.Response{}
