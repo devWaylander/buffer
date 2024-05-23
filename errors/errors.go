@@ -1,9 +1,10 @@
 package errors
 
 const (
-	ErrUnauthorized = "ERR_INVALID_TOKEN"
-	ErrDecodeReq    = "ERR_FAILED_TO_DECODE_JSON_REQ"
-	ErrMarshalResp  = "ERR_FAILED_TO_ENCODE_JSON_RESP"
+	ErrUnauthorized    = "ERR_INVALID_TOKEN"
+	ErrDecodeReq       = "ERR_FAILED_TO_DECODE_JSON_REQ"
+	ErrMarshalResp     = "ERR_FAILED_TO_ENCODE_JSON_RESP"
+	ErrFailedToSendReq = "ERR_FAILED_TO_SEND_REQUEST_TO_KPI_API"
 
 	ErrAuthUserIDIsMissing        = "ERR_AUTH_USER_ID_IS_MISSING"
 	ErrCommentIsMissing           = "ERR_COMMENT_IS_MISSING"

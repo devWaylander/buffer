@@ -1,7 +1,7 @@
 package model
 
 // тело запроса из прокси
-type SaveFactBody struct {
+type SaveFact struct {
 	PeriodStart       string `json:"period_start"`
 	PeriodEnd         string `json:"period_end"`
 	PeriodKey         string `json:"period_key"`
@@ -12,6 +12,21 @@ type SaveFactBody struct {
 	IsPlan            string `json:"is_plan"`
 	AuthUserID        string `json:"auth_user_id"`
 	Comment           string `json:"comment"`
+}
+
+func (SV *SaveFact) SaveFactToFormV1() map[string]string {
+	return map[string]string{
+		"period_start":            SV.PeriodStart,
+		"period_end":              SV.PeriodEnd,
+		"period_key":              SV.PeriodKey,
+		"indicator_to_mo_id":      SV.IndicatorToMoID,
+		"indicator_to_mo_fact_id": SV.IndicatorToFactID,
+		"value":                   SV.Value,
+		"fact_time":               SV.FactTime,
+		"is_plan":                 SV.IsPlan,
+		"auth_user_id":            SV.AuthUserID,
+		"comment":                 SV.Comment,
+	}
 }
 
 // тело запроса form/data в API бд

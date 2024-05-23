@@ -11,13 +11,13 @@ import (
 )
 
 type Service interface {
-	SaveFact(ctx context.Context)
+	SaveFact(ctx context.Context, data model.SaveFact) (model.Response, error)
 }
 
 func Configure(ctx context.Context, mux *http.ServeMux, service Service) {
 	// Прокси ручка для сохранения факта в БД
 	mux.HandleFunc("POST /api/v1/proxy/save_fact", func(w http.ResponseWriter, r *http.Request) {
-		body := model.SaveFactBody{}
+		body := model.SaveFact{}
 		err := json.NewDecoder(r.Body).Decode(&body)
 		if err != nil {
 			log.Println(err.Error())
@@ -64,6 +64,28 @@ func Configure(ctx context.Context, mux *http.ServeMux, service Service) {
 		if body.Value == "" {
 			http.Error(w, internalErrors.ErrValueIsMissing, http.StatusBadRequest)
 			return
+		}
+
+		resp, err := service.SaveFact(ctx, body)
+		if err != nil {
+			if err != nil {
+				log.Println(err)
+				http.Error(w, internalErrors.ErrFailedToSendReq, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		data, err := json.Marshal(resp)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, internalErrors.ErrMarshalResp, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(data); err != nil {
+			log.Println(err)
 		}
 	})
 }
