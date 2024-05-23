@@ -4,6 +4,8 @@ import (
 	"buffer/config"
 	"fmt"
 	"net/http"
+
+	internalErrors "buffer/errors"
 )
 
 // Обёртка авторизации прокси
@@ -20,7 +22,7 @@ func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	isAuth := a.Authorize(token)
 	if !isAuth {
-		http.Error(w, "invalid token", http.StatusUnauthorized)
+		http.Error(w, internalErrors.ErrUnauthorized, http.StatusUnauthorized)
 		return
 	}
 
