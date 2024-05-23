@@ -1,6 +1,6 @@
 package model
 
-// тело запроса из прокси
+// модель данных для прокси запроса
 type SaveFact struct {
 	PeriodStart       string `json:"period_start"`
 	PeriodEnd         string `json:"period_end"`
@@ -14,6 +14,7 @@ type SaveFact struct {
 	Comment           string `json:"comment"`
 }
 
+// конвертация в map
 func (SV *SaveFact) SaveFactToFormV1() map[string]string {
 	return map[string]string{
 		"period_start":            SV.PeriodStart,
@@ -29,6 +30,7 @@ func (SV *SaveFact) SaveFactToFormV1() map[string]string {
 	}
 }
 
+// Мок факт
 var MockJson = SaveFact{
 	PeriodStart:       "2024-05-01",
 	PeriodEnd:         "2024-05-31",

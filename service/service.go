@@ -18,13 +18,17 @@ import (
 )
 
 type service struct {
+	// Мьютекс буфера
 	bufferMu sync.RWMutex
-	buffer   map[uuid.UUID]map[string]string
+	// Буфер запросов
+	buffer map[uuid.UUID]map[string]string
 
+	// Сигнал о том, что запрос записан в буфер
 	signalStored chan struct{}
 }
 
 func New() *service {
+	// Инициализация
 	service := &service{
 		buffer:       make(map[uuid.UUID]map[string]string),
 		signalStored: make(chan struct{}),
@@ -41,18 +45,22 @@ const (
 	URL = "https://development.kpi-drive.ru/_api/facts/save_fact"
 )
 
+// Сохранение запроса в буфер
 func (s *service) storeToBuffer(index uuid.UUID, data map[string]string) {
 	s.bufferMu.RLock()
 	defer s.bufferMu.RUnlock()
 
 	s.buffer[index] = data
+	// Подача сигнала о том, что запрос записан
 	s.signalStored <- struct{}{}
 }
 
+// Отправка из буфера
 func (s *service) sendFromBuffer(index uuid.UUID) (*http.Response, error) {
 	s.bufferMu.RLock()
 	defer s.bufferMu.RUnlock()
 
+	// Формирование form-data
 	contentType, body, _ := s.createForm(s.buffer[index])
 
 	resp, err := s.request(contentType, body)
@@ -63,6 +71,7 @@ func (s *service) sendFromBuffer(index uuid.UUID) (*http.Response, error) {
 	return resp, nil
 }
 
+// Удаление отправленного запроса из буфера
 func (s *service) deleteFromBuffer(index uuid.UUID) {
 	s.bufferMu.Lock()
 	defer s.bufferMu.Unlock()
@@ -70,6 +79,7 @@ func (s *service) deleteFromBuffer(index uuid.UUID) {
 	delete(s.buffer, index)
 }
 
+// Утилитарная функция конвертации map в form-data
 func (s *service) createForm(form map[string]string) (string, io.Reader, error) {
 	body := new(bytes.Buffer)
 	mp := multipart.NewWriter(body)
@@ -83,6 +93,7 @@ func (s *service) createForm(form map[string]string) (string, io.Reader, error) 
 	return mp.FormDataContentType(), body, nil
 }
 
+// Функция отправки запроса
 func (s *service) request(contentType string, body io.Reader) (*http.Response, error) {
 	// Формируем запрос
 	req, err := http.NewRequest("POST", URL, body)
@@ -106,6 +117,7 @@ func (s *service) request(contentType string, body io.Reader) (*http.Response, e
 	return resp, nil
 }
 
+// Мок функция генерации запросов
 func (s *service) MockSaveFact(ctx context.Context) {
 	for i := 0; i < MockReqCount; i++ {
 		resp, err := s.SaveFact(ctx, model.MockJson)
@@ -117,12 +129,17 @@ func (s *service) MockSaveFact(ctx context.Context) {
 	}
 }
 
+// Бизнес-функция для proxy API
 func (s *service) SaveFact(ctx context.Context, data model.SaveFact) (model.Response, error) {
+	// Конвертация json в map
 	formMap := data.SaveFactToFormV1()
+	// Индекс для буфера запросов
 	uuid := uuid.New()
 
+	// Сохранение в буфер
 	go s.storeToBuffer(uuid, formMap)
 
+	// Отправка запроса из буфера по сигналу
 	var resp *http.Response
 	signal := <-s.signalStored
 	if signal == struct{}{} {

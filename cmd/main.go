@@ -45,10 +45,12 @@ func main() {
 		Handler: wrappedMux,
 	}
 
+	// Запуск мок генерации запросов
 	if config.GenMock == "TRUE" {
 		go service.MockSaveFact(ctx)
 	}
 
+	// Graceful shutdown
 	g, gCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		log.Printf("Server is up on PORT: %s", config.Port)

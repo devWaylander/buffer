@@ -25,6 +25,7 @@ func Configure(ctx context.Context, mux *http.ServeMux, service Service) {
 			return
 		}
 
+		// Проверка req параметров
 		if body.AuthUserID == "" {
 			http.Error(w, internalErrors.ErrAuthUserIDIsMissing, http.StatusBadRequest)
 			return
@@ -66,6 +67,7 @@ func Configure(ctx context.Context, mux *http.ServeMux, service Service) {
 			return
 		}
 
+		// Поход в бизнес-логику за сохранением в kpi-api
 		resp, err := service.SaveFact(ctx, body)
 		if err != nil {
 			log.Println(err)
@@ -80,6 +82,7 @@ func Configure(ctx context.Context, mux *http.ServeMux, service Service) {
 			return
 		}
 
+		// Ответ
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write(data); err != nil {
