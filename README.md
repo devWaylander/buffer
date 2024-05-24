@@ -21,4 +21,5 @@ By default, the API handle will be accessible at http://localhost:8080/api/v1/pr
 ```
 
 It is possible to generate mock requests in parallel with proxy handle bombing.
-In this case, the buffer will all records.
+
+In this case, the buffer will accumulate all records.
