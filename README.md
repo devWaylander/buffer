@@ -5,7 +5,8 @@
    * `GEN_MOCK_REQ = "TRUE"` // TRUE - If you want to generate mock requests, FALSE - if you don't want to
 3) In `/cmd` dir run command `go run main.go`
 
-By default, the API handle will be accessible at http://localhost:8080/api/v1/proxy/save_fact. You will need to provide a bearer authentication token and a JSON body in order to access the API.
+By default, the API handle will be accessible at http://localhost:8080/api/v1/proxy/save_fact
+You will need to provide a bearer authentication token and a JSON body in order to access the API.
 
 ```json
   "period_start":"",
