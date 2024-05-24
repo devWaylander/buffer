@@ -1,4 +1,4 @@
-1) Create .env in root
+1) Create .env in root dir
 2) Create a variables:
    * `PORT = "8080"`
    * `KPI_API_BEARER = "TOKEN_HERE"`
